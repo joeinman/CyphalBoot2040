@@ -16,6 +16,8 @@ add_executable(CyphalBoot2040
 # Add pico_stdlib Library Which Aggregates Commonly Used Features
 target_link_libraries(CyphalBoot2040
     pico_stdlib
+    hardware_resets
+    cmsis_core
 )
 
 # Custom Linker Script
