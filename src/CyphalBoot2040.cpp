@@ -4,10 +4,10 @@
 
 static void disableInterrupts()
 {
-	SysTick->CTRL &= ~1;
+    SysTick->CTRL &= ~1;
 
-	NVIC->ICER[0] = 0xFFFFFFFF;
-	NVIC->ICPR[0] = 0xFFFFFFFF;
+    NVIC->ICER[0] = 0xFFFFFFFF;
+    NVIC->ICPR[0] = 0xFFFFFFFF;
 }
 
 static void resetPeripherals()
@@ -22,24 +22,24 @@ static void resetPeripherals()
 
 static void startUserApplication(uint32_t applicationAddress)
 {
-	// Disable Interrupts & Reset Peripherals
+    // Disable Interrupts & Reset Peripherals
     disableInterrupts();
-	resetPeripherals();
+    resetPeripherals();
 
     // Set Vector Table Offset Register
-	uint32_t resetVector = *(volatile uint32_t *)(applicationAddress + 0x04);
-	SCB->VTOR = (volatile uint32_t)(applicationAddress);
+    uint32_t resetVector = *(volatile uint32_t *)(applicationAddress + 0x04);
+    SCB->VTOR = (volatile uint32_t)(applicationAddress);
 
     // Set Stack Pointer & Jump To Reset Vector
-	asm volatile("msr msp, %0"::"g"(*(volatile uint32_t *)applicationAddress));
-	asm volatile("bx %0"::"r" (resetVector));
+    asm volatile("msr msp, %0"::"g"(*(volatile uint32_t *)applicationAddress));
+    asm volatile("bx %0"::"r" (resetVector));
 }
 
 int main()
 {
     // Jump To Start Of Application
     uint32_t applicationAddress = *((uint32_t *)(XIP_BASE + (12 * 1024)));
-	startUserApplication(applicationAddress);
+    startUserApplication(applicationAddress);
 
     while(1)
     {
