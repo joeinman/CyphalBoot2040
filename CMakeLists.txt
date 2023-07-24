@@ -18,6 +18,9 @@ target_link_libraries(CyphalBoot2040
     pico_stdlib
 )
 
+# Custom Linker Script
+pico_set_linker_script(CyphalBoot2040 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memmap_cyphal_boot_2040.ld)
+
 # Enable USB Output, Disable UART Output
 pico_enable_stdio_usb(CyphalBoot2040 1)
 pico_enable_stdio_uart(CyphalBoot2040 0)
