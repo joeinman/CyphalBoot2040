@@ -35,10 +35,13 @@ ENTRY(_entry_point)
 
 SECTIONS
 {
+<<<<<<< HEAD
     .flash_begin : {
         __flash_binary_start = .;
     } > FLASH
     
+=======
+>>>>>>> ea469d1d6d523faba0d076071c236979ee16ff4c
     /* Removed Boot2 */
 
     .text : {
