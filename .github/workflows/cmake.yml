@@ -12,8 +12,7 @@ env:
 
 jobs:
   build:
-    if: github.repository_owner == 'raspberrypi'
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
 
     steps:
     - name: Clean workspace
@@ -22,10 +21,10 @@ jobs:
         rm -rf "${{ github.workspace }}"
         mkdir -p "${{ github.workspace }}"
 
-    - name: Checkout pico-examples
+    - name: Checkout CyphalBoot2040
       uses: actions/checkout@v2
       with:
-        path: pico-examples
+        path: CyphalBoot2040
 
     - name: Checkout pico-sdk/develop
       uses: actions/checkout@v2
@@ -41,14 +40,14 @@ jobs:
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
       # We'll use this as our working directory for all subsequent commands
-      working-directory: ${{github.workspace}}/pico-examples
-      run:  cmake -E make_directory ${{github.workspace}}/pico-examples/build
+      working-directory: ${{github.workspace}}/CyphalBoot2040
+      run:  cmake -E make_directory ${{github.workspace}}/CyphalBoot2040/build
 
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
       shell: bash
-      working-directory: ${{github.workspace}}/pico-examples/build
+      working-directory: ${{github.workspace}}/CyphalBoot2040/build
       # Note the current convention is to use the -S and -B options here to specify source 
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
@@ -59,7 +58,7 @@ jobs:
       run : cat /proc/cpuinfo  | grep processor | wc -l
 
     - name: Build
-      working-directory: ${{github.workspace}}/pico-examples/build
+      working-directory: ${{github.workspace}}/CyphalBoot2040/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config $BUILD_TYPE --parallel $(nproc)
