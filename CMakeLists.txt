@@ -7,7 +7,8 @@ set("BUILD_EXAMPLES" OFF)
 add_subdirectory(external/CRC32)
 
 # Create Project
-project(CyphalBoot2040)
+project(CyphalFirmwareServer VERSION 1.0.0 LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
 
 # Initialize The Raspberry Pi Pico SDK
 set(PICO_COPY_TO_RAM 1)

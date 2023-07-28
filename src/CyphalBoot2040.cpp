@@ -9,6 +9,7 @@
 // CRC32C Library
 #include <CRC32/CRC32.h>
 
+// Standard Library
 #include <cstring>
 #include <cstdio>
 
@@ -16,12 +17,13 @@
 
 // --------------------------------------------------------- D E F I N I T I O N S ---------------------------------------------------------
 
-const uint32_t XIP_USER_BASE = (const uint32_t)(XIP_BASE + (12 * 1024));
+const uint32_t XIP_USER_BASE = XIP_BASE + (12 * 1024);
 const uint32_t PAGE_SIZE = 256;
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
 // ---------------------------------------------------- H E L P E R    F U N C T I O N S ---------------------------------------------------
+
 static void disableInterrupts()
 {
     SysTick->CTRL &= ~1;
@@ -39,18 +41,18 @@ static void resetPeripherals()
         RESETS_RESET_PLL_SYS_BITS));
 }
 
-static void startUserApplication(uint32_t applicationAddress)
+static void startUserApplication()
 {
     // Disable Interrupts & Reset Peripherals
     disableInterrupts();
     resetPeripherals();
 
     // Set Vector Table Offset Register
-    uint32_t resetVector = *(volatile uint32_t *)(applicationAddress + 0x04);
-    SCB->VTOR = (volatile uint32_t)(applicationAddress);
+    uint32_t resetVector = *(volatile uint32_t *)(XIP_USER_BASE + 0x04);
+    SCB->VTOR = (volatile uint32_t)(XIP_USER_BASE);
 
     // Set Stack Pointer & Jump To Reset Vector
-    asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)applicationAddress));
+    asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)XIP_USER_BASE));
     asm volatile("bx %0" ::"r"(resetVector));
 }
 
@@ -107,8 +109,7 @@ int main()
     loadUserApplication();
 
     // Start User Application
-    uint32_t applicationAddress = *((uint32_t *)(XIP_BASE + (12 * 1024)));
-    startUserApplication(applicationAddress);
+    startUserApplication();
 
     while (1)
     {
