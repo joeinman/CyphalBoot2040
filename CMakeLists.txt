@@ -3,10 +3,14 @@ cmake_minimum_required(VERSION 3.27.0)
 # Initialize Pico-SDK From Submodule
 include(external/pico-sdk/pico_sdk_init.cmake)
 
+set("BUILD_EXAMPLES" OFF)
+add_subdirectory(external/CRC32)
+
 # Create Project
 project(CyphalBoot2040)
 
 # Initialize The Raspberry Pi Pico SDK
+set(PICO_COPY_TO_RAM 1)
 pico_sdk_init()
 
 add_executable(CyphalBoot2040
@@ -17,11 +21,13 @@ add_executable(CyphalBoot2040
 target_link_libraries(CyphalBoot2040
     pico_stdlib
     hardware_resets
+    hardware_flash
     cmsis_core
+    CRC32
 )
 
 # Custom Linker Script
-pico_set_linker_script(CyphalBoot2040 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memmap_cyphal_boot_2040.ld)
+pico_set_linker_script(CyphalBoot2040 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memmap_cyphal_boot_2040_copy_to_ram.ld)
 
 # Enable USB Output, Disable UART Output
 pico_enable_stdio_usb(CyphalBoot2040 1)
