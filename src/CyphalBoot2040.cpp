@@ -5,6 +5,7 @@
 #include <hardware/flash.h>
 #include <pico/stdlib.h>
 #include <RP2040.h>
+#include <tusb.h>
 
 // CRC32C Library
 #include <CRC32/CRC32.h>
@@ -17,7 +18,7 @@
 
 // --------------------------------------------------------- D E F I N I T I O N S ---------------------------------------------------------
 
-const uint32_t XIP_USER_BASE = XIP_BASE + (12 * 1024);
+const uint32_t XIP_USER_BASE = XIP_BASE + (28 * 1024);
 const uint32_t PAGE_SIZE = 256;
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -61,6 +62,10 @@ static void loadUserApplication()
     printf("UPDATEME\n"); // Notify server we're ready for update
 
     uint32_t currentAddress = XIP_USER_BASE;
+    uint32_t pagesWritten = 0;
+
+    // Erase the first sector of flash memory
+    flash_range_erase(currentAddress - XIP_BASE, FLASH_SECTOR_SIZE);
 
     while (1)
     {
@@ -85,8 +90,15 @@ static void loadUserApplication()
 
         if (remoteChecksum == localChecksum)
         {
+            // Check if we need to erase the next sector
+            if (pagesWritten > 0 && pagesWritten % (FLASH_SECTOR_SIZE / PAGE_SIZE) == 0)
+            {
+                flash_range_erase(currentAddress - XIP_BASE, FLASH_SECTOR_SIZE);
+            }
+
             flash_range_program(currentAddress - XIP_BASE, data, PAGE_SIZE);
             currentAddress += PAGE_SIZE;
+            pagesWritten++;
 
             printf("GOOD\n"); // Notify server page was received correctly
         }
@@ -104,6 +116,7 @@ static void loadUserApplication()
 int main()
 {
     stdio_init_all();
+    sleep_ms(2000);
 
     // Load User Application
     loadUserApplication();
