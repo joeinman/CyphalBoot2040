@@ -31,6 +31,9 @@ static void disableInterrupts()
 
     NVIC->ICER[0] = 0xFFFFFFFF;
     NVIC->ICPR[0] = 0xFFFFFFFF;
+
+    NVIC->ICER[1] = 0xFFFFFFFF;
+    NVIC->ICPR[1] = 0xFFFFFFFF;
 }
 
 static void resetPeripherals()
@@ -39,7 +42,18 @@ static void resetPeripherals()
         RESETS_RESET_IO_QSPI_BITS |
         RESETS_RESET_PADS_QSPI_BITS |
         RESETS_RESET_SYSCFG_BITS |
-        RESETS_RESET_PLL_SYS_BITS));
+        RESETS_RESET_PLL_SYS_BITS |
+        RESETS_RESET_USBCTRL_BITS |
+        RESETS_RESET_DMA_BITS |
+        RESETS_RESET_RTC_BITS |
+        RESETS_RESET_I2C0_BITS |
+        RESETS_RESET_I2C1_BITS |
+        RESETS_RESET_SPI0_BITS |
+        RESETS_RESET_SPI1_BITS |
+        RESETS_RESET_UART0_BITS |
+        RESETS_RESET_UART1_BITS |
+        RESETS_RESET_ADC_BITS |
+        RESETS_RESET_PWM_BITS));
 }
 
 static void startUserApplication()
@@ -62,18 +76,14 @@ static void loadUserApplication()
     printf("UPDATEME\n"); // Notify server we're ready for update
 
     uint32_t currentAddress = XIP_USER_BASE;
-    uint32_t pagesWritten = 0;
-
-    // Erase the first sector of flash memory
-    flash_range_erase(currentAddress - XIP_BASE, FLASH_SECTOR_SIZE);
 
     while (1)
     {
-        uint8_t data[PAGE_SIZE] = {0};
+        uint8_t data[FLASH_SECTOR_SIZE] = {0};
         uint32_t remoteChecksum = 0;
 
-        // Read page data and checksum from USB
-        for (int i = 0; i < PAGE_SIZE; i++)
+        // Read sector data and checksum from USB
+        for (int i = 0; i < FLASH_SECTOR_SIZE; i++)
         {
             data[i] = getchar();
         }
@@ -90,21 +100,16 @@ static void loadUserApplication()
 
         if (remoteChecksum == localChecksum)
         {
-            // Check if we need to erase the next sector
-            if (pagesWritten > 0 && pagesWritten % (FLASH_SECTOR_SIZE / PAGE_SIZE) == 0)
-            {
-                flash_range_erase(currentAddress - XIP_BASE, FLASH_SECTOR_SIZE);
-            }
+            // Erase the sector and write the data to flash
+            flash_range_erase(currentAddress - XIP_BASE, FLASH_SECTOR_SIZE);
+            flash_range_program(currentAddress - XIP_BASE, data, FLASH_SECTOR_SIZE);
+            currentAddress += FLASH_SECTOR_SIZE;
 
-            flash_range_program(currentAddress - XIP_BASE, data, PAGE_SIZE);
-            currentAddress += PAGE_SIZE;
-            pagesWritten++;
-
-            printf("GOOD\n"); // Notify server page was received correctly
+            printf("GOOD\n"); // Notify server sector was received correctly
         }
         else
         {
-            printf("BAD\n"); // Notify server to resend page
+            printf("BAD\n"); // Notify server to resend sector
         }
     }
 }
@@ -116,7 +121,8 @@ static void loadUserApplication()
 int main()
 {
     stdio_init_all();
-    sleep_ms(2000);
+    while (!tud_cdc_connected());
+    sleep_ms(1000);
 
     // Load User Application
     loadUserApplication();
