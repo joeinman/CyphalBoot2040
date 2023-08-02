@@ -7,7 +7,8 @@
 #include <RP2040.h>
 #include <tusb.h>
 
-// CRC32C Library
+// My Libraries
+#include <FlashKV/FlashKV.h>
 #include <CRC32/CRC32.h>
 
 // Standard Library
@@ -18,7 +19,10 @@
 
 // --------------------------------------------------------- D E F I N I T I O N S ---------------------------------------------------------
 
-const uint32_t XIP_USER_BASE = XIP_BASE + (28 * 1024);
+const uint32_t CYPHAL_BOOT_SIZE = 28 * 1024;
+const uint32_t FLASHKV_SIZE = 2 * FLASH_SECTOR_SIZE;
+
+const uint32_t XIP_USER_BASE = XIP_BASE + CYPHAL_BOOT_SIZE + FLASHKV_SIZE;
 const uint32_t PAGE_SIZE = 256;
 
 // -----------------------------------------------------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ include(external/pico-sdk/pico_sdk_init.cmake)
 
 set("BUILD_EXAMPLES" OFF)
 add_subdirectory(external/CRC32)
+add_subdirectory(external/FlashKV)
 
 # Create Project
 project(CyphalFirmwareServer VERSION 1.0.0 LANGUAGES C CXX)
@@ -25,6 +26,7 @@ target_link_libraries(CyphalBoot2040
     hardware_flash
     cmsis_core
     CRC32
+    FlashKV
 )
 
 # Custom Linker Script

@@ -4,3 +4,6 @@
 [submodule "external/CRC32"]
 	path = external/CRC32
 	url = https://github.com/joeinman/CRC32
+[submodule "external/FlashKV"]
+	path = external/FlashKV
+	url = https://github.com/joeinman/FlashKV
