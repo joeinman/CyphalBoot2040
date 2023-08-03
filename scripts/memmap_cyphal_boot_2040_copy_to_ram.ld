@@ -21,7 +21,7 @@
     __stack (== StackTop)
 */
 
-__cyphal_boot_2040_size = 28k;
+__cyphal_boot_2040_size = 88k;
 
 MEMORY
 {

@@ -12,17 +12,19 @@
 #include <CRC32/CRC32.h>
 
 // Standard Library
+#include <optional>
 #include <cstring>
 #include <cstdio>
+#include <vector>
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------- D E F I N I T I O N S ---------------------------------------------------------
 
-const uint32_t CYPHAL_BOOT_SIZE = 28 * 1024;
+const uint32_t FLASHKV_BASE = XIP_BASE + (1024 * 88);
 const uint32_t FLASHKV_SIZE = 2 * FLASH_SECTOR_SIZE;
 
-const uint32_t XIP_USER_BASE = XIP_BASE + CYPHAL_BOOT_SIZE + FLASHKV_SIZE;
+const uint32_t XIP_USER_BASE = FLASHKV_BASE + FLASHKV_SIZE;
 const uint32_t PAGE_SIZE = 256;
 
 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -77,7 +79,7 @@ static void startUserApplication()
 
 static void loadUserApplication()
 {
-    printf("UPDATEME\n"); // Notify server we're ready for update
+    printf("UPDATE_ME\n"); // Notify server we're ready for update
 
     uint32_t currentAddress = XIP_USER_BASE;
 
@@ -125,13 +127,95 @@ static void loadUserApplication()
 int main()
 {
     stdio_init_all();
-    while (!tud_cdc_connected());
+    while (!tud_cdc_connected())
+        ;
     sleep_ms(1000);
 
-    // Load User Application
-    loadUserApplication();
+    // Create a FlashKV object.
+    FlashKV::FlashKV flashKV(
+        [](uint32_t flashAddress, const uint8_t *data, size_t count) -> bool
+        {
+            flash_range_program(flashAddress - XIP_BASE, data, count);
+            return true;
+        },
+        [](uint32_t flashAddress, uint8_t *data, size_t count) -> bool
+        {
+            memcpy(data, reinterpret_cast<uint8_t *>(flashAddress), count);
+            return true;
+        },
+        [](uint32_t flashAddress, size_t count) -> bool
+        {
+            sleep_ms(100);
+            flash_range_erase(flashAddress - XIP_BASE, count);
+            return true;
+        },
+        FLASH_PAGE_SIZE,
+        FLASH_SECTOR_SIZE,
+        FLASHKV_BASE,
+        FLASHKV_SIZE);
 
-    // Start User Application
+    // Load The Store From File
+    int loadStatus = flashKV.loadStore();
+
+    // Read Node ID From The Store
+    uint8_t nodeID = 0;
+    auto nodeIDKey = flashKV.readKey("NODE_ID");
+    if (nodeIDKey)
+        nodeID = nodeIDKey.value()[0];
+
+    // Read Node Version Major From The Store
+    uint8_t nodeVersionMajor = 0;
+    auto nodeVersionMajorKey = flashKV.readKey("NODE_VERSION_MAJOR");
+    if (nodeVersionMajorKey)
+        nodeVersionMajor = nodeVersionMajorKey.value()[0];
+
+    // Read Node Version Minor From The Store
+    uint8_t nodeVersionMinor = 0;
+    auto nodeVersionMinorKey = flashKV.readKey("NODE_VERSION_MINOR");
+    if (nodeVersionMinorKey)
+        nodeVersionMinor = nodeVersionMinorKey.value()[0];
+
+    // Read Node Version Patch From The Store
+    uint8_t nodeVersionPatch = 0;
+    auto nodeVersionPatchKey = flashKV.readKey("NODE_VERSION_PATCH");
+    if (nodeVersionPatchKey)
+        nodeVersionPatch = nodeVersionPatchKey.value()[0];
+
+    // If Node ID Is 0, We Need To Request One From The Server
+    if (nodeID == 0)
+    {
+        printf("REQUEST_NODE_ID\n");
+        flashKV.writeKey("NODE_ID", std::vector<uint8_t>(1, getchar()));
+
+        // Read nodeName from the serial port
+        std::string nodeName;
+        char ch;
+        while ((ch = getchar()) != '\n' && ch != '\r')
+            nodeName.push_back(ch);
+        flashKV.writeKey("NODE_NAME", std::vector<uint8_t>(nodeName.begin(), nodeName.end()));
+    }
+
+    // Request Node Version From The Server
+    printf("REQUEST_NODE_VERSION\n");
+    uint8_t remoteVersionMajor = getchar();
+    uint8_t remoteVersionMinor = getchar();
+    uint8_t remoteVersionPatch = getchar();
+
+    if (nodeVersionMajor < remoteVersionMajor ||
+        (nodeVersionMajor == remoteVersionMajor && nodeVersionMinor < remoteVersionMinor) ||
+        (nodeVersionMajor == remoteVersionMajor && nodeVersionMinor == remoteVersionMinor && nodeVersionPatch < remoteVersionPatch))
+    {
+        // Request Update
+        loadUserApplication();
+
+        // Update Node Version
+        flashKV.writeKey("NODE_VERSION_MAJOR", std::vector<uint8_t>(1, remoteVersionMajor));
+        flashKV.writeKey("NODE_VERSION_MINOR", std::vector<uint8_t>(1, remoteVersionMinor));
+        flashKV.writeKey("NODE_VERSION_PATCH", std::vector<uint8_t>(1, remoteVersionPatch));
+        flashKV.saveStore();
+    }
+
+    // Start User Applications
     startUserApplication();
 
     while (1)
